@@ -52,6 +52,19 @@ export default function DeveloperPortalDashboard() {
         </svg>
       ),
     },
+    {
+      id: 'phisang',
+      title: 'Phisang',
+      description: 'Pre-click URL structure & reputation evaluation pipeline using URLhaus threat intel, lexical scoring, and sandboxed MarkupLM classification.',
+      href: 'https://phisang.kennethsunjaya.com',
+      badge: 'Anti-Phishing',
+      icon: (
+        <svg className="w-6 h-6 text-zinc-900" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+          <path d="m9 12 2 2 4-4" />
+        </svg>
+      ),
+    },
   ];
 
   return (
