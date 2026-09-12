@@ -2,6 +2,9 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 
 ## Getting Started
 
+For audio/video transcription setup, database configuration, and supported formats,
+see [Transcription](docs/transcription.md).
+
 First, run the development server:
 
 ```bash

@@ -12,6 +12,19 @@ interface ToolCard {
 export default function DeveloperPortalDashboard() {
   const tools: ToolCard[] = [
     {
+      id: 'transcription',
+      title: 'Transcription',
+      description: 'Transcribe audio and video into timestamped text. Save your recordings as Markdown or PDF transcripts.',
+      href: '/transcription',
+      badge: 'Audio & Video',
+      icon: (
+        <svg className="w-6 h-6 text-zinc-900" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round">
+          <rect x="9" y="2" width="6" height="12" rx="3" />
+          <path d="M5 10v2a7 7 0 0014 0v-2M12 19v3M8 22h8" />
+        </svg>
+      ),
+    },
+    {
       id: 'kg',
       title: 'Knowledge Graph Automation',
       description: 'Automated entity & relationship extraction pipeline, database management, and interactive graph visualization.',

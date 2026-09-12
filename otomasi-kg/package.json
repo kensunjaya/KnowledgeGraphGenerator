@@ -6,11 +6,14 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test:transcription": "node --test tests/transcription.test.mjs",
+    "setup:transcription": "node runnable/setup-transcription-db.mjs"
   },
   "dependencies": {
     "mssql": "^12.7.0",
     "next": "16.2.10",
+    "playwright": "^1.63.0",
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "tedious": "^20.0.0"
