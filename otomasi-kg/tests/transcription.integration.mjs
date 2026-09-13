@@ -74,6 +74,7 @@ test('upload, validation, retry, concurrency, worker persistence, and downloads'
     // decoding arguments, grouping/rendering, worker and database writes are real.
     await writeFile(path.join(fixture, 'ctranslate2.py'), 'def get_cuda_device_count():\n    return 0\n');
     await writeFile(path.join(fixture, 'faster_whisper.py'), `from types import SimpleNamespace
+import time
 class WhisperModel:
     def __init__(self, name, **kwargs):
         assert name == 'large-v3'
@@ -85,13 +86,30 @@ class WhisperModel:
         assert kwargs['beam_size'] == 5
         assert kwargs['vad_filter'] is True
         segments = [SimpleNamespace(start=i*10, end=i*10+4, text='Hello from the saved transcript. Unicode: café, 日本語, العربية. ' * 3) for i in range(35)]
-        return iter(segments), SimpleNamespace(duration=350, language='en', language_probability=0.99)
+        def stream():
+            for segment in segments:
+                time.sleep(0.15)
+                yield segment
+        return stream(), SimpleNamespace(duration=350, language='en', language_probability=0.99)
 `);
     const worker = spawn(process.execPath, ['runnable/transcription-worker.mjs', completed, token,
       path.join(root, completed), 'meeting.wav', 'en'], { windowsHide: true,
       env: { ...process.env, TRANSCRIPTION_PYTHON_EXECUTABLE: python, PYTHONPATH: fixture }, stdio: 'inherit' });
-    assert.equal(await new Promise((resolve, reject) => { worker.once('error', reject); worker.once('close', resolve); }), 0);
+    const exited = new Promise((resolve, reject) => { worker.once('error', reject); worker.once('close', resolve); });
+    let observedProgress = false;
+    for (let attempt = 0; attempt < 20; attempt++) {
+      const response = await fetch(`${base}/api/transcriptions`);
+      const inFlight = (await response.json()).find(row => row.id === completed);
+      if (inFlight?.progressStage === 'TRANSCRIBING' && inFlight.progressPercent > 0 && inFlight.progressPercent < 100) {
+        observedProgress = true; break;
+      }
+      await new Promise(resolve => setTimeout(resolve, 250));
+    }
+    assert.equal(await exited, 0);
+    assert.ok(observedProgress, 'API exposes intermediate percentage while transcription is running');
     const row = await waitFor(completed, 'COMPLETED');
+    assert.equal(row.progressPercent, 100);
+    assert.equal(row.progressStage, 'COMPLETED');
     assert.match(row.markdown, /Hello from the saved transcript/);
     assert.match(row.markdown, /large-v3/);
     await assert.rejects(stat(path.join(root, completed)), { code: 'ENOENT' });
@@ -114,6 +132,7 @@ class WhisperModel:
     assert.equal(listed.status, 200);
     const list = await listed.json();
     assert.equal(list.find(row => row.id === corrupt).status, 'FAILED');
+    assert.equal(list.find(row => row.id === corrupt).progressStage, 'FAILED');
     assert.ok(list.every(row => !Object.hasOwn(row, 'markdown')));
   } finally {
     for (const id of ids) {

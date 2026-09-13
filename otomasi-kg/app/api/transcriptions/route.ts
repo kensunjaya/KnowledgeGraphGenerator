@@ -12,7 +12,7 @@ export async function GET() {
     await recoverInterruptedTranscriptions();
     const pool = await getTranscriptionPool();
     const result = await pool.request().query(`SELECT LOWER(CONVERT(VARCHAR(36), id)) AS id, title, filename, fileSize, language,
-      status, createdAt, startedAt, completedAt, errorMessage
+      status, progressPercent, progressStage, createdAt, startedAt, completedAt, errorMessage
       FROM dbo.TranscriptionRequest ORDER BY createdAt DESC`);
     return Response.json(result.recordset, { headers: { 'Cache-Control': 'no-store' } });
   } catch (error) {

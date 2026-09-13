@@ -18,7 +18,7 @@ from transcribe import (
 
 
 class TranscriptionDeviceTests(unittest.TestCase):
-    def run_transcription(self, cuda_count, options=(), cpu_count=8):
+    def run_transcription(self, cuda_count, options=(), cpu_count=8, on_progress=None):
         args = build_parser().parse_args(["meeting.wav", *options])
         backend = Mock()
         backend.get_cuda_device_count.return_value = cuda_count
@@ -33,13 +33,21 @@ class TranscriptionDeviceTests(unittest.TestCase):
         with patch.dict("sys.modules", {"ctranslate2": backend, "faster_whisper": whisper}), \
              patch("transcribe.os.cpu_count", return_value=cpu_count), \
              redirect_stderr(StringIO()):
-            result = transcribe_audio(args)
+            result = transcribe_audio(args, on_progress=on_progress)
         return whisper.WhisperModel, backend, result
 
     def test_auto_cuda_uses_large_v3_float16(self):
         model, backend, _ = self.run_transcription(1)
         backend.get_cuda_device_count.assert_called_once_with()
         model.assert_called_once_with("large-v3", device="cuda", compute_type="float16")
+
+    def test_progress_uses_audio_timestamps_and_reserves_completion_for_saving(self):
+        updates = []
+        self.run_transcription(0, on_progress=lambda stage, percent: updates.append((stage, percent)))
+        self.assertEqual(updates[:2], [('LOADING_MODEL', 0), ('TRANSCRIBING', 0)])
+        self.assertAlmostEqual(updates[2][1], 2 / 3 * 100)
+        self.assertEqual(updates[-1], ('TRANSCRIBING', 99))
+        self.assertTrue(all(percent < 100 for _, percent in updates))
 
     def test_auto_cpu_uses_large_v3_float32_and_cpu_threads(self):
         model, _, _ = self.run_transcription(0)

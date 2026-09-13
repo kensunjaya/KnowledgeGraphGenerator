@@ -77,8 +77,15 @@ directory along with pending database records.
 A database constraint allows one processing request at a time. If another file is
 running, a new upload stays **Pending**; click **Transcribe** in its table row when
 the active request finishes. A detached Node worker continues after the browser
-closes and updates its database heartbeat every 15 seconds. A worker interrupted
+closes and updates its database heartbeat and progress every second. A worker interrupted
 for two minutes becomes **Failed** when the list refreshes and can be retried.
+
+The table refreshes every three seconds and shows checking media, loading the model,
+transcribing, and saving stages. Percentage measures the last segment's end timestamp
+divided by the original audio duration, not elapsed time or time remaining. It can jump
+over silence or pause while the model loads. Progress stays below 100% until the database
+commit succeeds. Retries reset progress to zero. After updating an existing deployment,
+run `npm run setup:transcription` to add the progress columns, then restart the app.
 
 ## API
 

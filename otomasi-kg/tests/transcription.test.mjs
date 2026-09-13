@@ -3,6 +3,19 @@ import assert from 'node:assert/strict';
 import { validateMediaFile, MAX_UPLOAD_BYTES } from '../lib/transcription-options.ts';
 import { transcriptHtml } from '../lib/transcription-pdf.ts';
 import { requestDirectory } from '../lib/transcription-storage.ts';
+import { parseProgress } from '../runnable/transcription-progress.mjs';
+
+test('progress is monotonic, bounded below completion, and ignores ordinary output', () => {
+  const initial = { stage: 'VALIDATING', percent: 0 };
+  const current = parseProgress('{"stage":"TRANSCRIBING","percent":42.8}', initial);
+  assert.deepEqual(current, { stage: 'TRANSCRIBING', percent: 42 });
+  assert.deepEqual(parseProgress('{"stage":"TRANSCRIBING","percent":10}', current), current);
+  assert.equal(parseProgress('{"stage":"LOADING_MODEL","percent":0}', current), current);
+  assert.equal(parseProgress('Language: en', current), current);
+  assert.equal(parseProgress('{"stage":"TRANSCRIBING","percent":"bad"}', current), current);
+  assert.deepEqual(parseProgress('{"stage":"SAVING","percent":100}', current), { stage: 'SAVING', percent: 99 });
+  assert.equal(parseProgress('{"stage":"COMPLETED","percent":100}', current), current);
+});
 
 test('media validation accepts audio/video case-insensitively and rejects invalid uploads', () => {
   assert.equal(validateMediaFile('MEETING.MP4', 100), null);

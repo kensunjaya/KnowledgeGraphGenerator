@@ -25,7 +25,7 @@ export function getTranscriptionPool() {
 export async function recoverInterruptedTranscriptions() {
   const pool = await getTranscriptionPool();
   await pool.request().query(`
-    UPDATE dbo.TranscriptionRequest SET status='FAILED', completedAt=SYSUTCDATETIME(),
+    UPDATE dbo.TranscriptionRequest SET status='FAILED', progressStage='FAILED', completedAt=SYSUTCDATETIME(),
       errorMessage=N'Transcription was interrupted. You can retry this file.'
     WHERE status='PROCESSING' AND heartbeatAt < DATEADD(MINUTE, -2, SYSUTCDATETIME())
   `);

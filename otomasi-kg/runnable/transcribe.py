@@ -14,7 +14,7 @@ import sys
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Iterable, Optional, Sequence
+from typing import Callable, Iterable, Optional, Sequence
 
 
 @dataclass(frozen=True)
@@ -113,7 +113,12 @@ def render_markdown(
     return "\n".join(lines).rstrip() + "\n"
 
 
-def transcribe_audio(args: argparse.Namespace) -> tuple[list[TranscriptSegment], TranscriptInfo]:
+def transcribe_audio(
+    args: argparse.Namespace,
+    on_progress: Optional[Callable[[str, float], None]] = None,
+) -> tuple[list[TranscriptSegment], TranscriptInfo]:
+    if on_progress:
+        on_progress('LOADING_MODEL', 0)
     try:
         import ctranslate2
         from faster_whisper import WhisperModel
@@ -142,6 +147,8 @@ def transcribe_audio(args: argparse.Namespace) -> tuple[list[TranscriptSegment],
         **model_options,
     )
 
+    if on_progress:
+        on_progress('TRANSCRIBING', 0)
     raw_segments, raw_info = model.transcribe(
         str(args.input),
         language=args.language,
@@ -154,6 +161,9 @@ def transcribe_audio(args: argparse.Namespace) -> tuple[list[TranscriptSegment],
     duration = float(raw_info.duration)
     segments: list[TranscriptSegment] = []
     for raw_segment in raw_segments:
+        if on_progress:
+            percent = float(raw_segment.end) / duration * 100 if duration > 0 else 0
+            on_progress('TRANSCRIBING', min(99, max(0, percent)))
         text = clean_text(raw_segment.text)
         if text:
             segment = TranscriptSegment(
@@ -220,7 +230,10 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def main(argv: Optional[Sequence[str]] = None) -> int:
+def main(
+    argv: Optional[Sequence[str]] = None,
+    on_progress: Optional[Callable[[str, float], None]] = None,
+) -> int:
     args = build_parser().parse_args(argv)
     args.input = args.input.expanduser().resolve()
 
@@ -238,11 +251,13 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
 
     try:
         output_dir.mkdir(parents=True, exist_ok=True)
-        segments, info = transcribe_audio(args)
+        segments, info = transcribe_audio(args, on_progress=on_progress)
         if not segments:
             print("Error: no speech was detected in the audio.", file=sys.stderr)
             return 1
 
+        if on_progress:
+            on_progress('SAVING', 99)
         txt_path = output_dir / f"{args.input.stem}.txt"
         md_path = output_dir / f"{args.input.stem}.md"
         txt_path.write_text(render_plain_text(segments), encoding="utf-8")

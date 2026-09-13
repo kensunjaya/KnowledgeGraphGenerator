@@ -29,6 +29,8 @@ export interface TranscriptionRequest {
   fileSize: number;
   language: string | null;
   status: 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
+  progressPercent: number;
+  progressStage: 'PENDING' | 'VALIDATING' | 'LOADING_MODEL' | 'TRANSCRIBING' | 'SAVING' | 'COMPLETED' | 'FAILED';
   createdAt: string;
   startedAt: string | null;
   completedAt: string | null;

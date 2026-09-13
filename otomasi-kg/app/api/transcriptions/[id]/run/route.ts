@@ -17,7 +17,8 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
     const result = await pool.request().input('id', sql.UniqueIdentifier, id)
       .input('token', sql.UniqueIdentifier, token).query(`
       UPDATE dbo.TranscriptionRequest SET status='PROCESSING', startedAt=SYSUTCDATETIME(),
-        heartbeatAt=SYSUTCDATETIME(), completedAt=NULL, errorMessage=NULL, runToken=@token
+        heartbeatAt=SYSUTCDATETIME(), completedAt=NULL, errorMessage=NULL, runToken=@token,
+        progressPercent=0, progressStage='VALIDATING'
       OUTPUT inserted.filename, inserted.language
       WHERE id=@id AND status IN ('PENDING','FAILED')`);
     const row = result.recordset[0];
@@ -34,7 +35,7 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
       child.unref();
     } catch (error) {
       await pool.request().input('id', sql.UniqueIdentifier, id).input('token', sql.UniqueIdentifier, token)
-        .query(`UPDATE dbo.TranscriptionRequest SET status='FAILED', completedAt=SYSUTCDATETIME(),
+        .query(`UPDATE dbo.TranscriptionRequest SET status='FAILED', progressStage='FAILED', completedAt=SYSUTCDATETIME(),
           errorMessage=N'Could not start transcription. Check the server configuration and retry.'
           WHERE id=@id AND runToken=@token AND status='PROCESSING'`);
       throw error;

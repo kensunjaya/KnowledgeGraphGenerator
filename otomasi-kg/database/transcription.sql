@@ -25,3 +25,14 @@ BEGIN
     CREATE UNIQUE INDEX UX_TranscriptionRequest_processing ON dbo.TranscriptionRequest(status)
         WHERE status = 'PROCESSING';
 END;
+
+IF COL_LENGTH('dbo.TranscriptionRequest', 'progressPercent') IS NULL
+    ALTER TABLE dbo.TranscriptionRequest ADD progressPercent INT NOT NULL
+        CONSTRAINT DF_TranscriptionRequest_progress DEFAULT 0
+        CONSTRAINT CK_TranscriptionRequest_progress CHECK (progressPercent BETWEEN 0 AND 100);
+IF COL_LENGTH('dbo.TranscriptionRequest', 'progressStage') IS NULL
+    ALTER TABLE dbo.TranscriptionRequest ADD progressStage VARCHAR(30) NOT NULL
+        CONSTRAINT DF_TranscriptionRequest_stage DEFAULT 'PENDING';
+-- Dynamic SQL also works when these columns were added in this same batch.
+EXEC sp_executesql N'UPDATE dbo.TranscriptionRequest SET progressPercent=100, progressStage=''COMPLETED'' WHERE status=''COMPLETED'';
+UPDATE dbo.TranscriptionRequest SET progressStage=''FAILED'' WHERE status=''FAILED'';';

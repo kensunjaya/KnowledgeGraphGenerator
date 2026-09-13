@@ -10,6 +10,11 @@ const badges = {
   FAILED: 'bg-rose-50 text-rose-800 border-rose-200/60',
 };
 
+const progressLabels = {
+  PENDING: 'Waiting to start', VALIDATING: 'Checking media…', LOADING_MODEL: 'Loading model…',
+  TRANSCRIBING: 'Transcribing', SAVING: 'Saving transcript…', COMPLETED: 'Completed', FAILED: 'Failed',
+};
+
 export function TranscriptionTable({ requests, onRefresh }: { requests: TranscriptionRequest[]; onRefresh: () => Promise<void> }) {
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
@@ -93,7 +98,19 @@ export function TranscriptionTable({ requests, onRefresh }: { requests: Transcri
                 <span className="w-1.5 h-1.5 mr-1.5 rounded-full bg-current" />Failed
               </button> :
               <span className={`inline-flex items-center text-xs font-semibold px-2.5 py-1 rounded-md border shadow-xs ${badges[row.status]}`}><span className="w-1.5 h-1.5 mr-1.5 rounded-full bg-current" />{row.status[0] + row.status.slice(1).toLowerCase()}</span>
-            }</td>
+            }
+              {row.status === 'PROCESSING' && <div className="mt-2 min-w-40">
+                <div className="flex justify-between gap-3 text-xs text-zinc-500 mb-1.5">
+                  <span>{progressLabels[row.progressStage] || 'Starting…'}</span>
+                  <span className="tabular-nums">{row.progressPercent ?? 0}%</span>
+                </div>
+                <div role="progressbar" aria-label={`Transcription progress for ${row.title}`} aria-valuemin={0} aria-valuemax={100}
+                  aria-valuenow={row.progressPercent ?? 0} aria-valuetext={`${progressLabels[row.progressStage] || 'Starting'}, ${row.progressPercent ?? 0}%`}
+                  className="h-1.5 rounded-full bg-zinc-100 overflow-hidden">
+                  <div className="h-full rounded-full bg-indigo-500 transition-[width] motion-reduce:transition-none" style={{ width: `${row.progressPercent ?? 0}%` }} />
+                </div>
+              </div>}
+            </td>
             <td className="px-6 py-4 text-xs text-zinc-500 whitespace-nowrap">{new Date(row.createdAt).toLocaleString()}</td>
             <td className="px-6 py-4"><div className="flex items-center gap-2 whitespace-nowrap">
               {row.status === 'COMPLETED' ? <>
